@@ -9,9 +9,9 @@ import vn.nirussv.serverauto.ServerAutoPlugin;
 public class BackupTask extends BukkitRunnable {
 
     private final ServerAutoPlugin plugin;
-    private final BackupService backupService;
+    private final LocalBackupService backupService;
 
-    public BackupTask(ServerAutoPlugin plugin, BackupService backupService) {
+    public BackupTask(ServerAutoPlugin plugin, LocalBackupService backupService) {
         this.plugin = plugin;
         this.backupService = backupService;
     }

@@ -5,7 +5,7 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import vn.nirussv.serverauto.ServerAutoPlugin;
-import vn.nirussv.serverauto.backup.BackupService;
+import vn.nirussv.serverauto.backup.LocalBackupService;
 import vn.nirussv.serverauto.config.ConfigManager;
 import vn.nirussv.serverauto.update.UpdateService;
 
@@ -18,11 +18,11 @@ import java.util.*;
 public class AutoCommand implements CommandExecutor, TabCompleter {
 
     private final ServerAutoPlugin plugin;
-    private final BackupService backupService;
+    private final LocalBackupService backupService;
     private final UpdateService updateService;
     private final ConfigManager config;
 
-    public AutoCommand(ServerAutoPlugin plugin, BackupService backupService, 
+    public AutoCommand(ServerAutoPlugin plugin, LocalBackupService backupService, 
                        UpdateService updateService, ConfigManager config) {
         this.plugin = plugin;
         this.backupService = backupService;
@@ -60,23 +60,38 @@ public class AutoCommand implements CommandExecutor, TabCompleter {
         }
         
         if (args.length < 2) {
-            sender.sendMessage("§eUsage: /auto backup <now|status>");
+            sender.sendMessage("§eUsage: /auto backup <now|status|list>");
             return;
         }
         
         switch (args[1].toLowerCase()) {
             case "now" -> {
-                sender.sendMessage("§aStarting backup...");
+                sender.sendMessage("§aStarting backup... This may take a while.");
                 backupService.performBackup(false);
             }
             case "status" -> {
                 sender.sendMessage("§e=== Backup Status ===");
                 sender.sendMessage("§7Last backup: §f" + formatTime(backupService.getLastBackupTime()));
+                sender.sendMessage("§7Last file: §f" + (backupService.getLastBackupFile() != null ? backupService.getLastBackupFile() : "N/A"));
                 sender.sendMessage("§7Status: §f" + backupService.getLastBackupStatus());
-                sender.sendMessage("§7GitHub: §f" + (config.isGitHubEnabled() ? "Enabled" : "Disabled"));
+                sender.sendMessage("§7Backup folder: §f" + config.getBackupFolder());
                 sender.sendMessage("§7Schedule: §f" + config.getBackupSchedule());
+                sender.sendMessage("§7Backup worlds: §f" + (config.isBackupWorlds() ? "Yes" : "No"));
+                sender.sendMessage("§7Backup plugins: §f" + (config.isBackupPlugins() ? "Yes" : "No"));
+                sender.sendMessage("§7Backup configs: §f" + (config.isBackupConfigs() ? "Yes" : "No"));
             }
-            default -> sender.sendMessage("§eUsage: /auto backup <now|status>");
+            case "list" -> {
+                List<String> backups = backupService.listBackups();
+                if (backups.isEmpty()) {
+                    sender.sendMessage("§eNo backups found.");
+                } else {
+                    sender.sendMessage("§e=== Available Backups ===");
+                    for (String backup : backups) {
+                        sender.sendMessage("§7- §f" + backup);
+                    }
+                }
+            }
+            default -> sender.sendMessage("§eUsage: /auto backup <now|status|list>");
         }
     }
 
@@ -149,8 +164,9 @@ public class AutoCommand implements CommandExecutor, TabCompleter {
     private void handleStatus(CommandSender sender) {
         sender.sendMessage("§e=== ServerAutomation Status ===");
         sender.sendMessage("§7Version: §f" + plugin.getDescription().getVersion());
-        sender.sendMessage("§7GitHub Backup: §f" + (config.isGitHubEnabled() ? "Enabled" : "Disabled"));
+        sender.sendMessage("§7Local Backup: §f" + (config.isLocalBackupEnabled() ? "Enabled" : "Disabled"));
         sender.sendMessage("§7Auto-Update: §f" + (config.isAutoUpdateEnabled() ? "Enabled" : "Disabled"));
+        sender.sendMessage("§7GitHub Sync: §f" + (config.isGitHubEnabled() ? "Enabled" : "Disabled"));
         sender.sendMessage("§7Last Backup: §f" + formatTime(backupService.getLastBackupTime()));
         sender.sendMessage("§7Last Update Check: §f" + formatTime(updateService.getLastCheckTime()));
     }
@@ -159,10 +175,10 @@ public class AutoCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("§e=== ServerAutomation Commands ===");
         sender.sendMessage("§7/auto backup now §8- §fStart immediate backup");
         sender.sendMessage("§7/auto backup status §8- §fShow backup status");
+        sender.sendMessage("§7/auto backup list §8- §fList available backups");
         sender.sendMessage("§7/auto update check §8- §fCheck for plugin updates");
         sender.sendMessage("§7/auto update list §8- §fList pending updates");
         sender.sendMessage("§7/auto update apply §8- §fApply downloaded updates");
-        sender.sendMessage("§7/auto update download <plugin> §8- §fDownload specific update");
         sender.sendMessage("§7/auto reload §8- §fReload configuration");
         sender.sendMessage("§7/auto status §8- §fShow plugin status");
     }
@@ -184,7 +200,7 @@ public class AutoCommand implements CommandExecutor, TabCompleter {
         
         if (args.length == 2) {
             return switch (args[0].toLowerCase()) {
-                case "backup" -> filterStartsWith(Arrays.asList("now", "status"), args[1]);
+                case "backup" -> filterStartsWith(Arrays.asList("now", "status", "list"), args[1]);
                 case "update" -> filterStartsWith(Arrays.asList("check", "apply", "list", "download"), args[1]);
                 default -> Collections.emptyList();
             };

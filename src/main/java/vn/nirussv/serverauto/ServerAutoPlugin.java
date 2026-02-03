@@ -1,8 +1,8 @@
 package vn.nirussv.serverauto;
 
 import org.bukkit.plugin.java.JavaPlugin;
-import vn.nirussv.serverauto.backup.BackupService;
 import vn.nirussv.serverauto.backup.BackupTask;
+import vn.nirussv.serverauto.backup.LocalBackupService;
 import vn.nirussv.serverauto.command.AutoCommand;
 import vn.nirussv.serverauto.config.ConfigManager;
 import vn.nirussv.serverauto.update.UpdateService;
@@ -11,14 +11,14 @@ import java.util.logging.Level;
 
 /**
  * Main plugin class for Server Automation.
- * Provides GitHub backup and auto-update functionality.
+ * Provides local backup and auto-update functionality.
  */
 public class ServerAutoPlugin extends JavaPlugin {
 
     private static ServerAutoPlugin instance;
     
     private ConfigManager configManager;
-    private BackupService backupService;
+    private LocalBackupService backupService;
     private UpdateService updateService;
     private BackupTask backupTask;
 
@@ -32,7 +32,7 @@ public class ServerAutoPlugin extends JavaPlugin {
             
             // Initialize managers
             this.configManager = new ConfigManager(this);
-            this.backupService = new BackupService(this, configManager);
+            this.backupService = new LocalBackupService(this, configManager);
             this.updateService = new UpdateService(this, configManager);
             
             // Register commands
@@ -41,7 +41,7 @@ public class ServerAutoPlugin extends JavaPlugin {
             getCommand("auto").setTabCompleter(autoCommand);
             
             // Start scheduled tasks
-            if (configManager.isBackupEnabled()) {
+            if (configManager.isLocalBackupEnabled()) {
                 startBackupScheduler();
             }
             
@@ -50,12 +50,7 @@ public class ServerAutoPlugin extends JavaPlugin {
             }
             
             getLogger().info("ServerAutomation has been enabled! Version: " + getDescription().getVersion());
-            
-            // Warn if GitHub token not configured
-            if (configManager.isGitHubEnabled() && configManager.getGitHubToken().isEmpty()) {
-                getLogger().warning("GitHub token is not configured! Backup feature will not work.");
-                getLogger().warning("Please set 'github.token' in config.yml");
-            }
+            getLogger().info("Backup folder: " + configManager.getBackupFolder());
             
         } catch (Exception e) {
             getLogger().log(Level.SEVERE, "Failed to enable ServerAutomation!", e);
@@ -113,10 +108,8 @@ public class ServerAutoPlugin extends JavaPlugin {
 
     /**
      * Simple cron parser - converts to tick interval.
-     * Supports basic patterns like "0 *\/6 * * *" (every 6 hours)
      */
     private long parseCronToTicks(String cron) {
-        // Default to 6 hours if parsing fails
         long defaultTicks = 6 * 60 * 60 * 20L; // 6 hours in ticks
         
         try {
@@ -128,10 +121,8 @@ public class ServerAutoPlugin extends JavaPlugin {
                 int hours = Integer.parseInt(hourPart.substring(2));
                 return hours * 60L * 60L * 20L;
             } else if (hourPart.equals("*")) {
-                // Every hour
                 return 60L * 60L * 20L;
             } else if (hourPart.equals("0")) {
-                // Daily at midnight
                 return 24L * 60L * 60L * 20L;
             }
         } catch (Exception e) {
@@ -155,7 +146,7 @@ public class ServerAutoPlugin extends JavaPlugin {
         return configManager;
     }
 
-    public BackupService getBackupService() {
+    public LocalBackupService getBackupService() {
         return backupService;
     }
 

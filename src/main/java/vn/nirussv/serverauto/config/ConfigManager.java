@@ -26,10 +26,56 @@ public class ConfigManager {
         this.config = plugin.getConfig();
     }
 
+    // ==================== LOCAL BACKUP Settings ====================
+
+    public boolean isLocalBackupEnabled() {
+        return config.getBoolean("local-backup.enabled", true);
+    }
+
+    public String getBackupFolder() {
+        return config.getString("local-backup.backup-folder", "backups");
+    }
+
+    public int getMaxBackups() {
+        return config.getInt("local-backup.max-backups", 10);
+    }
+
+    public String getBackupSchedule() {
+        return config.getString("local-backup.schedule", "0 */6 * * *");
+    }
+
+    public boolean isBackupOnShutdown() {
+        return config.getBoolean("local-backup.on-shutdown", true);
+    }
+
+    public boolean isBackupWorlds() {
+        return config.getBoolean("local-backup.backup-worlds", true);
+    }
+
+    public boolean isBackupPlugins() {
+        return config.getBoolean("local-backup.backup-plugins", true);
+    }
+
+    public boolean isBackupConfigs() {
+        return config.getBoolean("local-backup.backup-configs", true);
+    }
+
+    public List<String> getIncludePaths() {
+        return config.getStringList("local-backup.include-paths");
+    }
+
+    public List<String> getExcludePaths() {
+        return config.getStringList("local-backup.exclude-paths");
+    }
+
+    public boolean isCompressionEnabled() {
+        return config.getBoolean("local-backup.compress", true);
+    }
+
     // ==================== GitHub Settings ====================
 
     public boolean isGitHubEnabled() {
-        return config.getBoolean("github.enabled", true);
+        return config.getBoolean("github.enabled", false);
     }
 
     public String getGitHubToken() {
@@ -44,34 +90,12 @@ public class ConfigManager {
         return config.getString("github.branch", "main");
     }
 
-    public List<String> getBackupPaths() {
-        return config.getStringList("github.backup-paths");
-    }
-
-    // ==================== Backup Settings ====================
-
-    public boolean isBackupEnabled() {
-        return config.getBoolean("backup.enabled", true);
-    }
-
-    public String getBackupSchedule() {
-        return config.getString("backup.schedule", "0 */6 * * *");
-    }
-
-    public boolean isBackupOnShutdown() {
-        return config.getBoolean("backup.on-shutdown", true);
-    }
-
-    public boolean isCompressionEnabled() {
-        return config.getBoolean("backup.compress", true);
-    }
-
-    public int getMaxBackups() {
-        return config.getInt("backup.max-backups", 10);
+    public boolean isSyncBackups() {
+        return config.getBoolean("github.sync-backups", true);
     }
 
     public String getCommitMessageTemplate() {
-        return config.getString("backup.commit-message", "Backup: %date% %time%");
+        return config.getString("github.commit-message", "Backup: %date% %time%");
     }
 
     // ==================== Auto-Update Settings ====================
@@ -92,10 +116,6 @@ public class ConfigManager {
         return config.getBoolean("auto-update.auto-apply", false);
     }
 
-    /**
-     * Gets the list of plugins to monitor for updates.
-     * @return Map of plugin name to source configuration
-     */
     public Map<String, PluginUpdateConfig> getPluginsToUpdate() {
         Map<String, PluginUpdateConfig> plugins = new HashMap<>();
         
@@ -127,8 +147,5 @@ public class ConfigManager {
         return config.getBoolean("logging.log-to-file", true);
     }
 
-    /**
-     * Configuration for a plugin update source.
-     */
     public record PluginUpdateConfig(String source, String repo, String url, boolean autoApply) {}
 }

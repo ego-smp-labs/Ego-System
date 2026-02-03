@@ -2,40 +2,19 @@
 # Server Automation Configuration
 # ==========================================
 
-# GitHub Integration
-github:
-  # Enable GitHub backup feature
+# ==================== LOCAL BACKUP ====================
+# Backup server files to a local folder
+local-backup:
+  # Enable local backup
   enabled: true
   
-  # GitHub Personal Access Token (PAT)
-  # Required scopes: repo (full control of private repositories)
-  # Generate at: https://github.com/settings/tokens
-  token: ""
+  # Backup folder (relative to server root, or absolute path)
+  backup-folder: "backups"
   
-  # Repository in format: owner/repo
-  repository: ""
+  # Maximum number of backups to keep (oldest will be deleted)
+  max-backups: 10
   
-  # Branch to push backups to
-  branch: "main"
-  
-  # Paths to backup (relative to server root)
-  # Supports glob patterns
-  backup-paths:
-    - "worlds/"
-    - "plugins/*.yml"
-    - "plugins/*.json"
-    - "server.properties"
-    - "bukkit.yml"
-    - "spigot.yml"
-    - "paper.yml"
-
-# Backup Settings
-backup:
-  # Enable automatic backups
-  enabled: true
-  
-  # Schedule using cron format (default: every 6 hours)
-  # Format: "minute hour day-of-month month day-of-week"
+  # Schedule using cron format
   # Examples:
   #   "0 */6 * * *" - Every 6 hours
   #   "0 0 * * *"   - Daily at midnight
@@ -45,17 +24,55 @@ backup:
   # Backup on server shutdown
   on-shutdown: true
   
-  # Compress files before upload (recommended)
-  compress: true
+  # What to backup
+  backup-worlds: true      # Backup world folders
+  backup-plugins: true     # Backup plugin JARs
+  backup-configs: true     # Backup config files (*.yml, *.json, *.properties)
   
-  # Maximum backups to keep (0 = unlimited)
-  max-backups: 10
+  # Specific paths to include (in addition to above)
+  include-paths:
+    - "server.properties"
+    - "bukkit.yml"
+    - "spigot.yml"
+    - "paper.yml"
+    - "permissions.yml"
+  
+  # Paths to exclude (glob patterns)
+  exclude-paths:
+    - "backups/"
+    - "cache/"
+    - "logs/"
+    - "*.log"
+    - "*.tmp"
+    
+  # Compress backup to zip (recommended)
+  compress: true
+
+# ==================== GITHUB SYNC (Optional) ====================
+# Push backups to GitHub for off-site storage
+github:
+  # Enable GitHub sync
+  enabled: false
+  
+  # GitHub Personal Access Token (PAT)
+  # Required scopes: repo
+  # Generate at: https://github.com/settings/tokens
+  token: ""
+  
+  # Repository in format: owner/repo
+  repository: ""
+  
+  # Branch to push backups to
+  branch: "main"
+  
+  # Sync local backups to GitHub
+  sync-backups: true
   
   # Commit message template
   # Placeholders: %date%, %time%, %server%
   commit-message: "Backup: %date% %time%"
 
-# Auto-Update Settings
+# ==================== AUTO-UPDATE PLUGINS ====================
 auto-update:
   # Enable auto-update feature
   enabled: false
@@ -75,18 +92,14 @@ auto-update:
   #     source: github|url
   #     repo: owner/repo (for github)
   #     url: direct-download-url (for url)
-  #     auto-apply: true|false (override global setting)
+  #     auto-apply: true|false
   plugins: {}
   # Example:
   #   EgoSMP:
   #     source: github
   #     repo: NirussVn0/EgoSMP
-  #     auto-apply: false
 
-# Logging
+# ==================== LOGGING ====================
 logging:
-  # Enable verbose logging
   verbose: false
-  
-  # Log to file
   log-to-file: true

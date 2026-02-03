@@ -3,7 +3,7 @@ package vn.nirussv.serverauto.update;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import vn.nirussv.serverauto.ServerAutoPlugin;
-import vn.nirussv.serverauto.backup.GitHubClient;
+import vn.nirussv.serverauto.util.GitHubClient;
 import vn.nirussv.serverauto.config.ConfigManager;
 import vn.nirussv.serverauto.config.ConfigManager.PluginUpdateConfig;
 
