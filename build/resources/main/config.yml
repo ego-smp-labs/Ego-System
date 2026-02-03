@@ -1,0 +1,92 @@
+# ==========================================
+# Server Automation Configuration
+# ==========================================
+
+# GitHub Integration
+github:
+  # Enable GitHub backup feature
+  enabled: true
+  
+  # GitHub Personal Access Token (PAT)
+  # Required scopes: repo (full control of private repositories)
+  # Generate at: https://github.com/settings/tokens
+  token: ""
+  
+  # Repository in format: owner/repo
+  repository: ""
+  
+  # Branch to push backups to
+  branch: "main"
+  
+  # Paths to backup (relative to server root)
+  # Supports glob patterns
+  backup-paths:
+    - "worlds/"
+    - "plugins/*.yml"
+    - "plugins/*.json"
+    - "server.properties"
+    - "bukkit.yml"
+    - "spigot.yml"
+    - "paper.yml"
+
+# Backup Settings
+backup:
+  # Enable automatic backups
+  enabled: true
+  
+  # Schedule using cron format (default: every 6 hours)
+  # Format: "minute hour day-of-month month day-of-week"
+  # Examples:
+  #   "0 */6 * * *" - Every 6 hours
+  #   "0 0 * * *"   - Daily at midnight
+  #   "0 0 * * 0"   - Weekly on Sunday
+  schedule: "0 */6 * * *"
+  
+  # Backup on server shutdown
+  on-shutdown: true
+  
+  # Compress files before upload (recommended)
+  compress: true
+  
+  # Maximum backups to keep (0 = unlimited)
+  max-backups: 10
+  
+  # Commit message template
+  # Placeholders: %date%, %time%, %server%
+  commit-message: "Backup: %date% %time%"
+
+# Auto-Update Settings
+auto-update:
+  # Enable auto-update feature
+  enabled: false
+  
+  # Check interval in seconds (default: 24 hours)
+  check-interval: 86400
+  
+  # Notify admins when updates are available
+  notify-admins: true
+  
+  # Auto-apply updates on next restart
+  auto-apply: false
+  
+  # Plugins to monitor for updates
+  # Format:
+  #   PluginName:
+  #     source: github|url
+  #     repo: owner/repo (for github)
+  #     url: direct-download-url (for url)
+  #     auto-apply: true|false (override global setting)
+  plugins: {}
+  # Example:
+  #   EgoSMP:
+  #     source: github
+  #     repo: NirussVn0/EgoSMP
+  #     auto-apply: false
+
+# Logging
+logging:
+  # Enable verbose logging
+  verbose: false
+  
+  # Log to file
+  log-to-file: true

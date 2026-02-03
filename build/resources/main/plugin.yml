@@ -1,0 +1,24 @@
+name: ServerAutomation
+version: '1.0.0'
+main: vn.nirussv.serverauto.ServerAutoPlugin
+api-version: '1.21'
+prefix: ServerAuto
+authors: [NirussVn0]
+description: Automated server backup to GitHub and plugin auto-update
+
+commands:
+  auto:
+    description: Server automation commands
+    usage: /auto <backup|update|reload> [args]
+    aliases: [sa, serverauto]
+
+permissions:
+  serverauto.admin:
+    description: Full access to ServerAutomation commands
+    default: op
+  serverauto.backup:
+    description: Access to backup commands
+    default: op
+  serverauto.update:
+    description: Access to update commands
+    default: op
