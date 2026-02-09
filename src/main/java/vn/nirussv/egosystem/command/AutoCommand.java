@@ -17,12 +17,12 @@ import java.util.*;
  */
 public class AutoCommand implements CommandExecutor, TabCompleter {
 
-    private final ServerAutoPlugin plugin;
+    private final EgoSystemPlugin plugin;
     private final LocalBackupService backupService;
     private final UpdateService updateService;
     private final ConfigManager config;
 
-    public AutoCommand(ServerAutoPlugin plugin, LocalBackupService backupService, 
+    public AutoCommand(EgoSystemPlugin plugin, LocalBackupService backupService, 
                        UpdateService updateService, ConfigManager config) {
         this.plugin = plugin;
         this.backupService = backupService;

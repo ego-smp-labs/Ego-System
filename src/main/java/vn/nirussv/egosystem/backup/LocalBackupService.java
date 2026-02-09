@@ -20,14 +20,14 @@ import java.util.zip.ZipOutputStream;
  */
 public class LocalBackupService {
 
-    private final ServerAutoPlugin plugin;
+    private final EgoSystemPlugin plugin;
     private final ConfigManager config;
     
     private long lastBackupTime = 0;
     private String lastBackupStatus = "Never";
     private String lastBackupFile = null;
 
-    public LocalBackupService(ServerAutoPlugin plugin, ConfigManager config) {
+    public LocalBackupService(EgoSystemPlugin plugin, ConfigManager config) {
         this.plugin = plugin;
         this.config = config;
     }

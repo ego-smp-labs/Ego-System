@@ -8,10 +8,10 @@ import vn.nirussv.egosystem.EgoSystemPlugin;
  */
 public class BackupTask extends BukkitRunnable {
 
-    private final ServerAutoPlugin plugin;
+    private final EgoSystemPlugin plugin;
     private final LocalBackupService backupService;
 
-    public BackupTask(ServerAutoPlugin plugin, LocalBackupService backupService) {
+    public BackupTask(EgoSystemPlugin plugin, LocalBackupService backupService) {
         this.plugin = plugin;
         this.backupService = backupService;
     }

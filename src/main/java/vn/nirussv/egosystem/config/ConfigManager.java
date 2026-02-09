@@ -13,10 +13,10 @@ import java.util.Map;
  */
 public class ConfigManager {
 
-    private final ServerAutoPlugin plugin;
+    private final EgoSystemPlugin plugin;
     private FileConfiguration config;
 
-    public ConfigManager(ServerAutoPlugin plugin) {
+    public ConfigManager(EgoSystemPlugin plugin) {
         this.plugin = plugin;
         reload();
     }
@@ -100,9 +100,7 @@ public class ConfigManager {
 
     // ==================== Auto-Update Settings ====================
 
-    public boolean isAutoUpdateEnabled() {
-        return config.getBoolean("auto-update.enabled", false);
-    }
+
 
     public long getUpdateCheckInterval() {
         return config.getLong("auto-update.check-interval", 86400);
