@@ -1,16 +1,16 @@
-name: ServerAutomation
+name: Ego-System
 version: '1.0.0'
-main: vn.nirussv.serverauto.ServerAutoPlugin
+main: vn.nirussv.egosystem.EgoSystemPlugin
 api-version: '1.21'
-prefix: ServerAuto
+prefix: Ego-System
 authors: [NirussVn0]
 description: Automated server backup to GitHub and plugin auto-update
 
 commands:
-  auto:
-    description: Server automation commands
-    usage: /auto <backup|update|reload> [args]
-    aliases: [sa, serverauto]
+  ssm:
+    description: Ego-System management commands
+    usage: /ssm <backup|update|reload> [args]
+    aliases: [egosystem, es]
 
 permissions:
   serverauto.admin:

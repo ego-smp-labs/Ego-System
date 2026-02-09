@@ -1,8 +1,8 @@
-package vn.nirussv.serverauto.config;
+package vn.nirussv.egosystem.config;
 
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
-import vn.nirussv.serverauto.ServerAutoPlugin;
+import vn.nirussv.egosystem.EgoSystemPlugin;
 
 import java.util.HashMap;
 import java.util.List;
@@ -116,25 +116,48 @@ public class ConfigManager {
         return config.getBoolean("auto-update.auto-apply", false);
     }
 
-    public Map<String, PluginUpdateConfig> getPluginsToUpdate() {
-        Map<String, PluginUpdateConfig> plugins = new HashMap<>();
-        
-        ConfigurationSection section = config.getConfigurationSection("auto-update.plugins");
-        if (section == null) return plugins;
-        
-        for (String pluginName : section.getKeys(false)) {
-            ConfigurationSection pluginSection = section.getConfigurationSection(pluginName);
-            if (pluginSection == null) continue;
-            
-            String source = pluginSection.getString("source", "github");
-            String repo = pluginSection.getString("repo", "");
-            String url = pluginSection.getString("url", "");
-            boolean autoApply = pluginSection.getBoolean("auto-apply", isAutoApply());
-            
-            plugins.put(pluginName, new PluginUpdateConfig(source, repo, url, autoApply));
-        }
-        
-        return plugins;
+    // ==================== Auto-Update Settings (New) ====================
+
+    public int getUpdateInterval() {
+        return config.getInt("updates.interval", 120);
+    }
+
+    public int getUpdateBootTime() {
+        return config.getInt("updates.bootTime", 50);
+    }
+
+    public List<String> getUpdateCronSchedule() {
+        return config.getStringList("updates.schedule.cron");
+    }
+
+    public String getUpdateTimezone() {
+        return config.getString("updates.schedule.timezone", "UTC+7");
+    }
+
+    public String getGitHubKey() {
+        return config.getString("updates.key", "");
+    }
+    
+    public boolean isUseUpdateFolder() {
+        return config.getBoolean("updates.behavior.useUpdateFolder", true);
+    }
+    
+    public int getMaxParallelDownloads() {
+        return config.getInt("updates.performance.maxParallel", 4);
+    }
+
+    // Deprecated methods kept/adapted for compatibility or removal if unused
+    public boolean isAutoUpdateEnabled() {
+        // We can imply enabled if interval > 0 or cron is set, 
+        // but for now let's assume always enabled if the new config is present,
+        // or fall back to old config.
+        return true; 
+    }
+    
+    public Map<String, String> getPluginSources() {
+        // This should read from list.yml, which is not in config.yml
+        // We will handle list.yml loading in UpdateService
+        return new HashMap<>();
     }
 
     // ==================== Logging Settings ====================

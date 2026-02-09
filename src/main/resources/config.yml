@@ -103,3 +103,105 @@ auto-update:
 logging:
   verbose: false
   log-to-file: true
+
+updates:
+  # How often to run plugin updates (minutes). Default: 120 (every 2 hours)
+  interval: 120
+  # Delay in seconds after server startup before updating
+  bootTime: 50
+  schedule:
+    # Experimental: A cron expression to schedule updates. Overrides interval and bootTime if set.
+    cron:
+    - '12:00'
+    # The timezone for the cron schedule.
+    timezone: 'UTC+7'
+  # GitHub token for Actions/authenticated requests (optional)
+  key: ''
+# HTTP configuration (optional)
+http:
+  # If blank, a rotating pool of realistic User-Agents will be used.
+  userAgent: ''
+  # Extra request headers added to every request. Only add if you know you need it.
+  headers: []
+  # Verify TLS certificates (set to false to trust all; only if you must)
+  sslVerify: true
+  # Optional pool of User-Agents; the plugin will rotate between them to avoid
+  # strict CDNs blocking automation.
+  userAgents:
+  - ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
+  - ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15'
+  - ua: 'Mozilla/5.0 (X11; Linux x86_64; rv:126.0) Gecko/20100101 Firefox/126.0'
+# Proxy configuration (optional)
+proxy:
+# Proxy type: DIRECT | HTTP | SOCKS
+  type: NONE
+# Proxy host
+  host: proxy.example
+# Proxy port
+  port: 8080
+# Behavior toggles
+behavior:
+# Use the update folder for updates. This requires a server restart to apply the update. For Velocity, it may require two restarts.
+  useUpdateFolder: true
+# Open .jar/.zip to verify integrity
+  zipFileCheck: true
+# Skip replace when MD5 is identical
+  ignoreDuplicates: true
+# Allow GitHub pre-releases by default
+  allowPreRelease: false
+  autoCompile:
+# Enable source build fallback for GitHub
+    enable: false
+# Build when release has no jar assets
+    whenNoJarAsset: true
+# Build when default branch is newer by N months
+    branchNewerMonths: 6
+# Enable verbose debug logging (toggle via /aup debug)
+  debug: false
+# Restart the server automatically after updates.
+  restartAfterUpdate: false
+# Delay in seconds before restarting after updates.
+  restartDelaySec: 5
+# Broadcast message before restarting (supports {delay}).
+  restartMessage: 'Server restarting to apply updates.'
+# Optional custom paths
+paths:
+# Custom temp/cache path (optional)
+  tempPath: ''
+# Custom update folder path (optional)
+  updatePath: ''
+# Custom final plugin path (optional)
+  filePath: ''
+# Custom rollback storage path (optional)
+  rollbackPath: ''
+# Performance and reliability options
+performance:
+  # Maximum parallel downloads. Higher is faster but uses more IO/CPU.
+  # If set above CPU cores, it is clamped internally.
+  maxParallel: 4
+  # HTTP connect timeout in milliseconds per request.
+  connectTimeoutMs: 10000
+  # HTTP read timeout in milliseconds per request.
+  readTimeoutMs: 30000
+  # Optional per-download hard timeout in seconds. 0 disables the cap.
+  perDownloadTimeoutSec: 0
+  # Retry behavior for transient HTTP errors (403/429/5xx)
+  maxRetries: 3
+  # Exponential backoff base and max delay in milliseconds between retries
+  backoffBaseMs: 500
+# Backoff max in ms for retries
+  backoffMaxMs: 5000
+# Max concurrent downloads per host
+  maxPerHost: 3
+rollback:
+  # Keep a backup of the previous version when updating a plugin and automatically revert back on plugin load failure (experimental!)
+  enabled: false
+  # Maximum number of old versions to keep per plugin (0 = unlimited)
+  maxBackups: 3
+  # Case-insensitive regex patterns that trigger rollback when matched in logs.
+  filters:
+  - 'Unsupported API version'
+  - 'Could not load plugin'
+  - 'Error occurred while enabling'
+  - 'Unsupported MC version'
+  - 'You are running an unsupported server version'

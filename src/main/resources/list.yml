@@ -1,0 +1,50 @@
+# Map plugin name to its update source URL
+
+# --- Essentials & Core ---
+EssentialsX: "https://modrinth.com/plugin/essentialsx"
+EssentialsX-GUI: "https://github.com/mrsquiddev/EssentialsX-GUI/releases"
+LuckPerms: "https://modrinth.com/plugin/luckperms"
+PlaceholderAPI: "https://modrinth.com/plugin/placeholderapi"
+ProtocolLib: "https://modrinth.com/plugin/protocollib"
+PlugManX: "https://modrinth.com/plugin/plugmanx"
+CommandAPI: "https://modrinth.com/plugin/commandapi"
+
+# --- World & Utils ---
+Chunky: "https://modrinth.com/plugin/chunky"
+ChunkyBorder: "https://modrinth.com/plugin/chunkyborder"
+DriveBackupV2: "https://modrinth.com/plugin/drivebackupv2"
+InvSee++: "https://modrinth.com/plugin/invseepp"
+spark: "https://modrinth.com/plugin/spark"
+ResourcePackManager: "https://github.com/SamJakob/ResourcePackManager/releases"
+sit: "https://github.com/G-E-E-K-Y/Sit/releases"
+
+# --- Network & Geyser (Bedrock Support) ---
+Geyser-Spigot: "https://modrinth.com/plugin/geyser"
+floodgate-spigot: "https://modrinth.com/plugin/floodgate"
+hurricane-spigot: "https://modrinth.com/plugin/hurricane"
+ViaVersion: "https://modrinth.com/plugin/viaversion"
+ViaBackwards: "https://modrinth.com/plugin/viabackwards"
+
+# --- Artixel Plugins (Ax...) ---
+AxGraves: "https://modrinth.com/plugin/axgraves"
+AxTrade: "https://modrinth.com/plugin/axtrade"
+
+# --- Vane Modules ---
+vane-admin: "https://github.com/oddlama/vane/releases"
+vane-bedtime: "https://github.com/oddlama/vane/releases"
+vane-core: "https://github.com/oddlama/vane/releases"
+vane-permissions: "https://github.com/oddlama/vane/releases"
+vane-trifles: "https://github.com/oddlama/vane/releases"
+
+# --- Chat & Players ---
+voicechat: "https://modrinth.com/plugin/simple-voice-chat"
+SkinsRestorer: "https://modrinth.com/plugin/skinsrestorer"
+AntiHealthIndicator: "https://github.com/FilipM13/AntiHealthIndicator/releases"
+carryon: "https://modrinth.com/plugin/carry-on-bukkit"
+
+# --- Dependencies & Libraries ---
+packetevents: "https://modrinth.com/plugin/packetevents"
+TAB: "https://modrinth.com/plugin/tab"
+
+# --- Manual / Special ---
+# Vulcan: Premium

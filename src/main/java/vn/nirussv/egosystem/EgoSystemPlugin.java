@@ -1,21 +1,21 @@
-package vn.nirussv.serverauto;
+package vn.nirussv.egosystem;
 
 import org.bukkit.plugin.java.JavaPlugin;
-import vn.nirussv.serverauto.backup.BackupTask;
-import vn.nirussv.serverauto.backup.LocalBackupService;
-import vn.nirussv.serverauto.command.AutoCommand;
-import vn.nirussv.serverauto.config.ConfigManager;
-import vn.nirussv.serverauto.update.UpdateService;
+import vn.nirussv.egosystem.backup.BackupTask;
+import vn.nirussv.egosystem.backup.LocalBackupService;
+import vn.nirussv.egosystem.command.AutoCommand;
+import vn.nirussv.egosystem.config.ConfigManager;
+import vn.nirussv.egosystem.update.UpdateService;
 
 import java.util.logging.Level;
 
 /**
- * Main plugin class for Server Automation.
+ * Main plugin class for Ego-System.
  * Provides local backup and auto-update functionality.
  */
-public class ServerAutoPlugin extends JavaPlugin {
+public class EgoSystemPlugin extends JavaPlugin {
 
-    private static ServerAutoPlugin instance;
+    private static EgoSystemPlugin instance;
     
     private ConfigManager configManager;
     private LocalBackupService backupService;
@@ -32,13 +32,14 @@ public class ServerAutoPlugin extends JavaPlugin {
             
             // Initialize managers
             this.configManager = new ConfigManager(this);
+            // TODO: Refactor services to use new package structure if needed
             this.backupService = new LocalBackupService(this, configManager);
             this.updateService = new UpdateService(this, configManager);
             
             // Register commands
             AutoCommand autoCommand = new AutoCommand(this, backupService, updateService, configManager);
-            getCommand("auto").setExecutor(autoCommand);
-            getCommand("auto").setTabCompleter(autoCommand);
+            getCommand("ssm").setExecutor(autoCommand);
+            getCommand("ssm").setTabCompleter(autoCommand);
             
             // Start scheduled tasks
             if (configManager.isLocalBackupEnabled()) {
@@ -74,7 +75,7 @@ public class ServerAutoPlugin extends JavaPlugin {
             }
         }
         
-        getLogger().info("ServerAutomation has been disabled.");
+        getLogger().info("Ego-System has been disabled.");
         instance = null;
     }
 
@@ -138,7 +139,7 @@ public class ServerAutoPlugin extends JavaPlugin {
         getLogger().info("Configuration reloaded.");
     }
 
-    public static ServerAutoPlugin getInstance() {
+    public static EgoSystemPlugin getInstance() {
         return instance;
     }
 

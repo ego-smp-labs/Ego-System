@@ -2,7 +2,7 @@ plugins {
     id 'java'
 }
 
-group = 'vn.nirussv'
+group = 'vn.nirussv.egosystem'
 version = '1.0.0'
 
 repositories {

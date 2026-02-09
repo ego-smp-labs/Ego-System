@@ -1,7 +1,7 @@
-package vn.nirussv.serverauto.backup;
+package vn.nirussv.egosystem.backup;
 
 import org.bukkit.scheduler.BukkitRunnable;
-import vn.nirussv.serverauto.ServerAutoPlugin;
+import vn.nirussv.egosystem.EgoSystemPlugin;
 
 /**
  * Scheduled task for automatic backups.

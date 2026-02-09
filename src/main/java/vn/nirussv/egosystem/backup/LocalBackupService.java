@@ -1,9 +1,9 @@
-package vn.nirussv.serverauto.backup;
+package vn.nirussv.egosystem.backup;
 
 import org.bukkit.Bukkit;
 import org.bukkit.World;
-import vn.nirussv.serverauto.ServerAutoPlugin;
-import vn.nirussv.serverauto.config.ConfigManager;
+import vn.nirussv.egosystem.EgoSystemPlugin;
+import vn.nirussv.egosystem.config.ConfigManager;
 
 import java.io.*;
 import java.nio.file.*;

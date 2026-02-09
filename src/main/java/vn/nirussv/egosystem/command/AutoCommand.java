@@ -1,13 +1,13 @@
-package vn.nirussv.serverauto.command;
+package vn.nirussv.egosystem.command;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
-import vn.nirussv.serverauto.ServerAutoPlugin;
-import vn.nirussv.serverauto.backup.LocalBackupService;
-import vn.nirussv.serverauto.config.ConfigManager;
-import vn.nirussv.serverauto.update.UpdateService;
+import vn.nirussv.egosystem.EgoSystemPlugin;
+import vn.nirussv.egosystem.backup.LocalBackupService;
+import vn.nirussv.egosystem.config.ConfigManager;
+import vn.nirussv.egosystem.update.UpdateService;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
