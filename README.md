@@ -67,7 +67,7 @@ Main Command: `/ssm` (Aliases: `/egosystem`, `/es`)
 Map your plugins to their source URLs.
 ```yaml
 EssentialsX: "https://modrinth.com/plugin/essentialsx"
-EgoSMP: "https://github.com/ego-smp-labs/EgoSMP"
+EgoSMP: "https://github.com/ego-smp-labs/EgoSMP-Plugin"
 ```
 
 ### config.yml (Updates)
