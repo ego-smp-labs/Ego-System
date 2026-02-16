@@ -56,6 +56,27 @@ public class LocalBackupService {
     }
 
     /**
+     * Resolves the server root directory from the plugin data folder.
+     * Uses getAbsoluteFile() to prevent NPE when getDataFolder() returns a relative path.
+     *
+     * @return the server root path (parent of the "plugins" directory)
+     */
+    private Path resolveServerRoot() {
+        File dataFolder = plugin.getDataFolder().getAbsoluteFile();
+        File pluginsDir = dataFolder.getParentFile();
+        if (pluginsDir == null) {
+            plugin.getLogger().warning("Could not resolve plugins directory from: " + dataFolder);
+            return dataFolder.toPath();
+        }
+        File serverDir = pluginsDir.getParentFile();
+        if (serverDir == null) {
+            plugin.getLogger().warning("Could not resolve server root from: " + pluginsDir);
+            return pluginsDir.toPath();
+        }
+        return serverDir.toPath();
+    }
+
+    /**
      * Executes the backup process.
      */
     private void executeBackup() {
@@ -64,7 +85,7 @@ public class LocalBackupService {
             long startTime = System.currentTimeMillis();
             
             // Create backup folder
-            Path serverRoot = plugin.getDataFolder().getParentFile().getParentFile().toPath();
+            Path serverRoot = resolveServerRoot();
             Path backupFolder = serverRoot.resolve(config.getBackupFolder());
             Files.createDirectories(backupFolder);
             
@@ -347,7 +368,7 @@ public class LocalBackupService {
      */
     public List<String> listBackups() {
         List<String> backups = new ArrayList<>();
-        Path serverRoot = plugin.getDataFolder().getParentFile().getParentFile().toPath();
+        Path serverRoot = resolveServerRoot();
         Path backupFolder = serverRoot.resolve(config.getBackupFolder());
         
         if (!Files.exists(backupFolder)) return backups;
