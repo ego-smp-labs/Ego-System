@@ -42,12 +42,18 @@ public class AutoCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         
-        switch (args[0].toLowerCase()) {
-            case "backup" -> handleBackup(sender, args);
-            case "update" -> handleUpdate(sender, args);
-            case "reload" -> handleReload(sender);
-            case "status" -> handleStatus(sender);
-            default -> showHelp(sender);
+        if (args[0].equalsIgnoreCase("backup")) {
+            handleBackup(sender, args);
+        } else if (args[0].equalsIgnoreCase("update")) {
+            handleUpdate(sender, args);
+        } else if (args[0].equalsIgnoreCase("reload")) {
+            handleReload(sender);
+        } else if (args[0].equalsIgnoreCase("status")) {
+            handleStatus(sender);
+        } else if (args[0].equalsIgnoreCase("event")) {
+            handleEvent(sender, args);
+        } else {
+            showHelp(sender);
         }
         
         return true;
@@ -172,17 +178,56 @@ public class AutoCommand implements CommandExecutor, TabCompleter {
     }
 
     private void showHelp(CommandSender sender) {
-        sender.sendMessage("§e=== ServerAutomation Commands ===");
-        sender.sendMessage("§7/auto backup now §8- §fStart immediate backup");
-        sender.sendMessage("§7/auto backup status §8- §fShow backup status");
-        sender.sendMessage("§7/auto backup list §8- §fList available backups");
-        sender.sendMessage("§7/auto update check §8- §fCheck for plugin updates");
-        sender.sendMessage("§7/auto update list §8- §fList pending updates");
-        sender.sendMessage("§7/auto update apply §8- §fApply downloaded updates");
-        sender.sendMessage("§7/auto reload §8- §fReload configuration");
-        sender.sendMessage("§7/auto status §8- §fShow plugin status");
+        sender.sendMessage("§8[§cEgo System§8] §7Commands:");
+        sender.sendMessage("§8- §c/esm backup start §7- Start a manual backup");
+        sender.sendMessage("§8- §c/esm update check §7- Check for plugin updates");
+        sender.sendMessage("§8- §c/esm update force §7- Force update and restart");
+        sender.sendMessage("§8- §c/esm reload §7- Reload config");
+        sender.sendMessage("§8- §c/esm status §7- Show system status");
+        sender.sendMessage("§8- §c/esm event <start/stop/locate> §7- Manage EgoSMP events");
     }
 
+    private void handleEvent(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage("§cUsage: /esm event <start/stop/locate>");
+            return;
+        }
+        
+        // Dispatch the command as if the player typed /sabi event <args>
+        String subAction = args[1].toLowerCase();
+        org.bukkit.Bukkit.dispatchCommand(sender, "sabi event " + subAction);
+        
+        // Custom cleanup logic for stopping the event across the server
+        if (subAction.equals("stop")) {
+            sender.sendMessage("§a[Ego-System] Initiating strict cleanup of 'event_betrayer_heart'...");
+            int removed = 0;
+            org.bukkit.NamespacedKey key = new org.bukkit.NamespacedKey("sabi", "ego_item_key");
+            
+            // Clean online players
+            for (org.bukkit.entity.Player p : org.bukkit.Bukkit.getOnlinePlayers()) {
+                org.bukkit.inventory.PlayerInventory inv = p.getInventory();
+                for (int i = 0; i < inv.getSize(); i++) {
+                    org.bukkit.inventory.ItemStack item = inv.getItem(i);
+                    if (item != null && item.hasItemMeta() && "event_betrayer_heart".equals(item.getItemMeta().getPersistentDataContainer().get(key, org.bukkit.persistence.PersistentDataType.STRING))) {
+                        inv.setItem(i, null);
+                        removed++;
+                    }
+                }
+            }
+            
+            // Clean dropped items in all loaded worlds
+            for (org.bukkit.World world : org.bukkit.Bukkit.getWorlds()) {
+                for (org.bukkit.entity.Entity entity : world.getEntitiesByClass(org.bukkit.entity.Item.class)) {
+                    org.bukkit.inventory.ItemStack item = ((org.bukkit.entity.Item) entity).getItemStack();
+                    if (item != null && item.hasItemMeta() && "event_betrayer_heart".equals(item.getItemMeta().getPersistentDataContainer().get(key, org.bukkit.persistence.PersistentDataType.STRING))) {
+                        entity.remove();
+                        removed++;
+                    }
+                }
+            }
+            sender.sendMessage("§a[Ego-System] Cleanup complete. Removed " + removed + " instances of the Heart.");
+        }
+    }
     private String formatTime(long timestamp) {
         if (timestamp == 0) return "Never";
         return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(timestamp));
@@ -190,18 +235,19 @@ public class AutoCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (!sender.hasPermission("serverauto.admin")) {
+        if (!sender.hasPermission("egosystem.admin")) {
             return Collections.emptyList();
         }
         
         if (args.length == 1) {
-            return filterStartsWith(Arrays.asList("backup", "update", "reload", "status"), args[0]);
+            return filterStartsWith(Arrays.asList("backup", "update", "reload", "status", "event"), args[0]);
         }
         
         if (args.length == 2) {
             return switch (args[0].toLowerCase()) {
-                case "backup" -> filterStartsWith(Arrays.asList("now", "status", "list"), args[1]);
-                case "update" -> filterStartsWith(Arrays.asList("check", "apply", "list", "download"), args[1]);
+                case "backup" -> filterStartsWith(Arrays.asList("start"), args[1]);
+                case "update" -> filterStartsWith(Arrays.asList("check", "force"), args[1]);
+                case "event" -> filterStartsWith(Arrays.asList("start", "stop", "locate"), args[1]);
                 default -> Collections.emptyList();
             };
         }
