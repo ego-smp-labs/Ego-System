@@ -5,6 +5,7 @@ import vn.nirussv.egosystem.backup.BackupTask;
 import vn.nirussv.egosystem.backup.LocalBackupService;
 import vn.nirussv.egosystem.command.AutoCommand;
 import vn.nirussv.egosystem.config.ConfigManager;
+import vn.nirussv.egosystem.event.*;
 import vn.nirussv.egosystem.update.UpdateService;
 
 import java.util.logging.Level;
@@ -21,6 +22,8 @@ public class EgoSystemPlugin extends JavaPlugin {
     private LocalBackupService backupService;
     private UpdateService updateService;
     private BackupTask backupTask;
+    private EventStateMachine eventStateMachine;
+    private EventKillTracker eventKillTracker;
 
     @Override
     public void onEnable() {
@@ -36,8 +39,18 @@ public class EgoSystemPlugin extends JavaPlugin {
             this.backupService = new LocalBackupService(this, configManager);
             this.updateService = new UpdateService(this, configManager);
             
-            // Register commands
-            AutoCommand autoCommand = new AutoCommand(this, backupService, updateService, configManager);
+            EventConfig eventConfig = new EventConfig(this);
+            this.eventKillTracker = new EventKillTracker();
+            BossZombieManager bossManager = new BossZombieManager(this, eventConfig);
+            this.eventStateMachine = new EventStateMachine(this, eventConfig, eventKillTracker, bossManager);
+            getServer().getPluginManager().registerEvents(new EventListener(this, eventStateMachine), this);
+            
+            if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
+                new vn.nirussv.egosystem.papi.EgoEventExpansion(this, eventKillTracker).register();
+                getLogger().info("PlaceholderAPI expansion registered.");
+            }
+            
+            AutoCommand autoCommand = new AutoCommand(this, backupService, updateService, configManager, eventStateMachine);
             getCommand("ssm").setExecutor(autoCommand);
             getCommand("ssm").setTabCompleter(autoCommand);
             
@@ -153,5 +166,13 @@ public class EgoSystemPlugin extends JavaPlugin {
 
     public UpdateService getUpdateService() {
         return updateService;
+    }
+
+    public EventStateMachine getEventStateMachine() {
+        return eventStateMachine;
+    }
+
+    public EventKillTracker getEventKillTracker() {
+        return eventKillTracker;
     }
 }

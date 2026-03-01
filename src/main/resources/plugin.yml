@@ -4,7 +4,8 @@ main: vn.nirussv.egosystem.EgoSystemPlugin
 api-version: '1.21'
 prefix: Ego-System
 authors: [NirussVn0]
-description: Automated server backup to GitHub and plugin auto-update
+description: Automated server backup, plugin auto-update, and event management
+softdepend: [PlaceholderAPI]
 
 commands:
   ssm:
@@ -21,4 +22,7 @@ permissions:
     default: op
   serverauto.update:
     description: Access to update commands
+    default: op
+  serverauto.event:
+    description: Access to event commands
     default: op

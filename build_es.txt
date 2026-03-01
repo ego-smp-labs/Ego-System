@@ -1,0 +1,113 @@
+﻿Starting a Gradle Daemon (subsequent builds will be faster)
+
+> Task :compileJava
+gradle : B:\__JAVA__
+\Ego_SMP\Ego-System\
+src\main\java\vn\nir
+ussv\egosystem\event
+\BossZombieManager.j
+ava:37: error: 
+cannot find symbol
+At line:1 char:1
++ gradle 
+compileJava 
+--console=plain 
+2>&1 | Out-File 
+-Encoding utf8 bui 
+...
++ ~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~
+    + CategoryInfo  
+            : NotS  
+  pecified: (B:\_   
+ _JAVA__\Ego...n    
+ot find symbol:    
+String) [], Rem    
+oteException
+    + FullyQualifie 
+   dErrorId : Nati  
+  veCommandError
+ 
+        boss.getAttr
+ibute(Attribute.MAX_
+HEALTH).setBaseValue
+(80.0);
+                    
+               ^
+  symbol:   
+variable MAX_HEALTH
+  location: class 
+Attribute
+Note: Some input 
+files use or 
+override a 
+deprecated API.
+Note: Recompile 
+with 
+-Xlint:deprecation 
+for details.
+1 error
+
+> Task :compileJava FAILED
+
+[Incubating] Problems report is available at: file:///B:/__JAVA__/Ego_SMP/Ego-System/build/reports/problems/problems-report.html
+
+FAILURE: Build 
+failed with an 
+exception.
+
+* What went wrong:
+Execution failed 
+for task 
+':compileJava'.
+> Compilation 
+failed; see the 
+compiler output 
+below.
+  Note: Recompile 
+with 
+-Xlint:deprecation 
+for details.
+  B:\__JAVA__\Ego_SM
+P\Ego-System\src\mai
+n\java\vn\nirussv\eg
+osystem\event\BossZo
+mbieManager.java:37:
+ error: cannot find 
+symbol
+          boss.getAt
+tribute(Attribute.MA
+X_HEALTH).setBaseVal
+ue(80.0);
+                    
+                 ^
+    symbol:   
+variable MAX_HEALTH
+    location: class 
+Attribute
+  Note: Some input 
+files use or 
+override a 
+deprecated API.
+  1 error
+
+* Try:
+> Check your code 
+and dependencies to 
+fix the compilation 
+error(s)
+> Run with --scan 
+to get full 
+insights from a 
+Build Scan (powered 
+by Develocity).
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.3.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 17s
+1 actionable task: 1 executed
