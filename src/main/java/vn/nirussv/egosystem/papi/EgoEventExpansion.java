@@ -17,7 +17,7 @@ public class EgoEventExpansion extends PlaceholderExpansion {
     }
 
     @Override
-    public @NotNull String getIdentifier() { return "egosmp"; }
+    public @NotNull String getIdentifier() { return "egosystem"; }
 
     @Override
     public @NotNull String getAuthor() { return "NirussVn0"; }

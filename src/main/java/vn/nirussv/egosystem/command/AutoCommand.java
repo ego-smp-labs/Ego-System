@@ -227,13 +227,11 @@ public class AutoCommand implements CommandExecutor, TabCompleter {
                 }
             }
             case "spawn-zombie" -> {
-                if (!(sender instanceof Player player)) {
+                if (!(sender instanceof Player)) {
                     sender.sendMessage("§cLệnh này chỉ dành cho người chơi.");
                     return;
                 }
-                var bossManager = new vn.nirussv.egosystem.event.BossZombieManager(plugin, eventStateMachine.getEventConfig());
-                bossManager.spawnBossZombie(player.getLocation());
-                sender.sendMessage("§a[Event] Boss Zombie đã được triệu hồi tại vị trí của bạn!");
+                org.bukkit.Bukkit.dispatchCommand(sender, "sabi event spawn-zombie");
             }
             case "setting" -> handleEventSetting(sender, args);
             default -> sender.sendMessage("§cUsage: /ssm event <start|stop|end|phase|spawn-zombie|setting>");
