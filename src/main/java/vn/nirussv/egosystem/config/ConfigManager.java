@@ -69,7 +69,12 @@ public class ConfigManager {
     }
 
     public boolean isCompressionEnabled() {
-        return config.getBoolean("local-backup.compress", true);
+        String format = config.getString("local-backup.format", "zip");
+        return "zip".equalsIgnoreCase(format) || "tar.gz".equalsIgnoreCase(format);
+    }
+    
+    public String getBackupFormat() {
+        return config.getString("local-backup.format", "zip").toLowerCase();
     }
 
     // ==================== GitHub Settings ====================
@@ -96,6 +101,16 @@ public class ConfigManager {
 
     public String getCommitMessageTemplate() {
         return config.getString("github.commit-message", "Backup: %date% %time%");
+    }
+
+    // ==================== Google Drive Settings ====================
+
+    public boolean isGoogleDriveEnabled() {
+        return config.getBoolean("google-drive.enabled", false);
+    }
+
+    public String getGoogleDriveFolderId() {
+        return config.getString("google-drive.folder-id", "");
     }
 
     // ==================== Auto-Update Settings ====================

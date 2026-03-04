@@ -14,6 +14,16 @@ import java.util.logging.Level;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import okhttp3.*;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
+import java.util.concurrent.TimeUnit;
+
 /**
  * Service for performing LOCAL server backups.
  * Backs up worlds, plugins, and config files to a local folder.
@@ -133,7 +143,11 @@ public class LocalBackupService {
             
             // Create backup
             Path backupPath;
-            if (config.isCompressionEnabled()) {
+            String format = config.getBackupFormat();
+            if ("tar.gz".equals(format)) {
+                backupPath = backupFolder.resolve(backupName + ".tar.gz");
+                createTarGzBackup(backupPath, filesToBackup, serverRoot);
+            } else if ("zip".equals(format)) {
                 backupPath = backupFolder.resolve(backupName + ".zip");
                 createZipBackup(backupPath, filesToBackup, serverRoot);
             } else {
@@ -157,7 +171,10 @@ public class LocalBackupService {
             
             // Sync to GitHub if enabled
             if (config.isGitHubEnabled() && config.isSyncBackups()) {
-                syncToGitHub(backupPath);
+                syncToGitHub(backupPath, backupName);
+            }
+            if (config.isGoogleDriveEnabled()) {
+                syncToGoogleDrive(backupPath);
             }
             
         } catch (Exception e) {
@@ -340,12 +357,206 @@ public class LocalBackupService {
     }
 
     /**
-     * Syncs the backup to GitHub.
+     * Creates a TAR.GZ backup.
      */
-    private void syncToGitHub(Path backupPath) {
-        // TODO: Implement GitHub sync if needed
-        if (config.isVerbose()) {
-            plugin.getLogger().info("GitHub sync not yet implemented for local backups");
+    private void createTarGzBackup(Path tarPath, Map<String, Path> files, Path serverRoot) throws IOException {
+        try (OutputStream fos = new FileOutputStream(tarPath.toFile());
+             GzipCompressorOutputStream gzo = new GzipCompressorOutputStream(fos);
+             TarArchiveOutputStream tao = new TarArchiveOutputStream(gzo)) {
+            
+            tao.setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
+
+            for (Map.Entry<String, Path> entry : files.entrySet()) {
+                try {
+                    File file = entry.getValue().toFile();
+                    TarArchiveEntry tarEntry = new TarArchiveEntry(file, entry.getKey());
+                    tao.putArchiveEntry(tarEntry);
+                    if (file.isFile()) {
+                        Files.copy(entry.getValue(), tao);
+                    }
+                    tao.closeArchiveEntry();
+                } catch (IOException e) {
+                    if (config.isVerbose()) {
+                        plugin.getLogger().warning("Could not backup (tar): " + entry.getKey() + " - " + e.getMessage());
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Syncs the backup to GitHub as a Release Asset.
+     */
+    private void syncToGitHub(Path backupPath, String releaseName) {
+        String token = config.getGitHubToken();
+        String repo = config.getGitHubRepository();
+        if (token == null || token.isEmpty() || repo == null || repo.isEmpty()) {
+            plugin.getLogger().warning("GitHub sync enabled but token/repo is missing.");
+            return;
+        }
+
+        plugin.getLogger().info("Starting GitHub sync to " + repo + " (Release: " + releaseName + ")");
+        OkHttpClient client = new OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(5, TimeUnit.MINUTES)
+            .readTimeout(5, TimeUnit.MINUTES)
+            .build();
+            
+        Gson gson = new Gson();
+
+        try {
+            // 1. Create a release
+            JsonObject releaseBody = new JsonObject();
+            releaseBody.addProperty("tag_name", releaseName);
+            releaseBody.addProperty("name", "Backup " + releaseName);
+            releaseBody.addProperty("body", "Automated backup generated on " + new Date().toString());
+            releaseBody.addProperty("draft", false);
+            releaseBody.addProperty("prerelease", false);
+
+            RequestBody body = RequestBody.create(releaseBody.toString(), MediaType.parse("application/json; charset=utf-8"));
+            Request createReleaseReq = new Request.Builder()
+                    .url("https://api.github.com/repos/" + repo + "/releases")
+                    .header("Authorization", "token " + token)
+                    .header("Accept", "application/vnd.github.v3+json")
+                    .post(body)
+                    .build();
+
+            String uploadUrl;
+            try (Response response = client.newCall(createReleaseReq).execute()) {
+                if (!response.isSuccessful()) {
+                    plugin.getLogger().warning("Failed to create GitHub release: " + response.code() + " " + response.body().string());
+                    return;
+                }
+                JsonObject jsonResponse = gson.fromJson(response.body().string(), JsonObject.class);
+                uploadUrl = jsonResponse.get("upload_url").getAsString().replace("{?name,label}", "");
+            }
+
+            // 2. Upload the file as a release asset
+            File file = backupPath.toFile();
+            RequestBody fileBody = RequestBody.create(file, MediaType.parse("application/octet-stream"));
+            Request uploadReq = new Request.Builder()
+                    .url(uploadUrl + "?name=" + file.getName())
+                    .header("Authorization", "token " + token)
+                    .header("Accept", "application/vnd.github.v3+json")
+                    .post(fileBody)
+                    .build();
+
+            try (Response response = client.newCall(uploadReq).execute()) {
+                if (response.isSuccessful()) {
+                    plugin.getLogger().info("Successfully uploaded backup to GitHub Releases!");
+                } else {
+                    plugin.getLogger().warning("Failed to upload backup asset to GitHub: " + response.code() + " " + response.body().string());
+                }
+            }
+
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Exception during GitHub sync", e);
+        }
+    }
+
+    /**
+     * Syncs the backup to Google Drive.
+     */
+    private void syncToGoogleDrive(Path backupPath) {
+        String folderId = config.getGoogleDriveFolderId();
+        File credFile = new File(plugin.getDataFolder(), "GoogleDriveCredential.json");
+
+        if (!credFile.exists()) {
+            plugin.getLogger().warning("Google Drive enabled but GoogleDriveCredential.json missing in plugins/Ego-System/");
+            return;
+        }
+
+        plugin.getLogger().info("Starting Google Drive sync...");
+        Gson gson = new Gson();
+        String refreshToken = null;
+        String clientId = null;
+        String clientSecret = null;
+
+        try (FileReader reader = new FileReader(credFile)) {
+            JsonObject creds = gson.fromJson(reader, JsonObject.class);
+            if (creds.has("refresh_token")) refreshToken = creds.get("refresh_token").getAsString();
+            else {
+                plugin.getLogger().warning("GoogleDriveCredential.json is missing required 'refresh_token'.");
+                return;
+            }
+            if (creds.has("client_id")) clientId = creds.get("client_id").getAsString();
+            else {
+                plugin.getLogger().warning("GoogleDriveCredential.json is missing required 'client_id'. Please add your OAuth Client ID.");
+                return;
+            }
+            if (creds.has("client_secret")) clientSecret = creds.get("client_secret").getAsString();
+            else {
+                plugin.getLogger().warning("GoogleDriveCredential.json is missing required 'client_secret'. Please add your OAuth Client Secret.");
+                return;
+            }
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to read GoogleDriveCredential.json", e);
+            return;
+        }
+
+        OkHttpClient client = new OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(5, TimeUnit.MINUTES)
+            .readTimeout(5, TimeUnit.MINUTES)
+            .build();
+
+        try {
+            // 1. Get Access Token
+            RequestBody tokenBody = new FormBody.Builder()
+                    .add("client_id", clientId)
+                    .add("client_secret", clientSecret)
+                    .add("refresh_token", refreshToken)
+                    .add("grant_type", "refresh_token")
+                    .build();
+
+            Request tokenReq = new Request.Builder()
+                    .url("https://oauth2.googleapis.com/token")
+                    .post(tokenBody)
+                    .build();
+
+            String token;
+            try (Response response = client.newCall(tokenReq).execute()) {
+                if (!response.isSuccessful()) {
+                    plugin.getLogger().warning("Google Drive: Failed to get auth token: " + response.code() + " " + response.body().string());
+                    return;
+                }
+                JsonObject resObj = gson.fromJson(response.body().string(), JsonObject.class);
+                token = resObj.get("access_token").getAsString();
+            }
+
+            // 2. Upload file
+            File file = backupPath.toFile();
+            
+            JsonObject metadata = new JsonObject();
+            metadata.addProperty("name", file.getName());
+            if (folderId != null && !folderId.isEmpty()) {
+                com.google.gson.JsonArray parents = new com.google.gson.JsonArray();
+                parents.add(folderId);
+                metadata.add("parents", parents);
+            }
+
+            RequestBody requestBody = new MultipartBody.Builder()
+                    .setType(MultipartBody.FORM)
+                    .addFormDataPart("metadata", null, RequestBody.create(metadata.toString(), MediaType.parse("application/json; charset=UTF-8")))
+                    .addFormDataPart("file", file.getName(), RequestBody.create(file, MediaType.parse("application/octet-stream")))
+                    .build();
+
+            Request uploadReq = new Request.Builder()
+                    .url("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart")
+                    .header("Authorization", "Bearer " + token)
+                    .post(requestBody)
+                    .build();
+
+            try (Response response = client.newCall(uploadReq).execute()) {
+                if (response.isSuccessful()) {
+                    plugin.getLogger().info("Successfully uploaded backup to Google Drive!");
+                } else {
+                    plugin.getLogger().warning("Google Drive upload failed: " + response.code() + " " + response.body().string());
+                }
+            }
+
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Exception during Google Drive sync", e);
         }
     }
 
@@ -391,12 +602,289 @@ public class LocalBackupService {
     }
 
     /**
-     * Restores a backup.
+     * Prepares the restore context by fetching the file from the requested source (local, gdrive, github).
      */
-    public boolean restoreBackup(String backupName) {
-        // TODO: Implement restore functionality
-        plugin.getLogger().warning("Restore functionality not yet implemented");
-        return false;
+    public void prepareRestoreContext(String source, String fileIdentifier, boolean unzip, org.bukkit.command.CommandSender sender) {
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                Path serverRoot = resolveServerRoot();
+                Path restorePendingFolder = serverRoot.resolve("plugins/Ego-System/restore_pending");
+                Files.createDirectories(restorePendingFolder);
+                
+                // Clear old pending restores
+                try (DirectoryStream<Path> stream = Files.newDirectoryStream(restorePendingFolder)) {
+                    for (Path entry : stream) {
+                        if (Files.isDirectory(entry)) {
+                            deleteDirectory(entry);
+                        } else {
+                            Files.delete(entry);
+                        }
+                    }
+                }
+                
+                Path targetFile = restorePendingFolder.resolve(fileIdentifier);
+                sender.sendMessage("§e[Restore] Bắt đầu tải dữ liệu từ nguồn: " + source + "...");
+
+                boolean downloadSuccess = false;
+                switch (source.toLowerCase()) {
+                    case "local" -> {
+                        Path localBackup = serverRoot.resolve(config.getBackupFolder()).resolve(fileIdentifier);
+                        if (Files.exists(localBackup)) {
+                            if (Files.isDirectory(localBackup)) {
+                                sender.sendMessage("§e[Restore] Đang copy thư mục backup local...");
+                                createFolderBackup(targetFile, collectAllDirectoryFiles(localBackup));
+                                downloadSuccess = true;
+                            } else {
+                                Files.copy(localBackup, targetFile, StandardCopyOption.REPLACE_EXISTING);
+                                downloadSuccess = true;
+                            }
+                        } else {
+                            sender.sendMessage("§c[Restore] Không tìm thấy file local này.");
+                        }
+                    }
+                    case "gdrive" -> {
+                        downloadSuccess = downloadFromGoogleDrive(fileIdentifier, targetFile, sender);
+                    }
+                    case "github" -> {
+                        downloadSuccess = downloadFromGitHub(fileIdentifier, targetFile, sender);
+                    }
+                    default -> sender.sendMessage("§c[Restore] Nguồn không hợp lệ, hãy chọn local, gdrive hoặc github.");
+                }
+
+                if (!downloadSuccess) {
+                    sender.sendMessage("§c[Restore] Tải dữ liệu thất bại.");
+                    return;
+                }
+
+                sender.sendMessage("§a[Restore] Đã tải thành công file backup. Đang vào thư mục restore_pending.");
+
+                if (unzip && !Files.isDirectory(targetFile)) {
+                    sender.sendMessage("§e[Restore] Bắt đầu giải nén archive...");
+                    Path extractFolder = restorePendingFolder.resolve("extracted_" + fileIdentifier.replace(".zip", "").replace(".tar.gz", ""));
+                    Files.createDirectories(extractFolder);
+                    extractArchive(targetFile, extractFolder);
+                    sender.sendMessage("§a[Restore] Giải nén thành công.");
+                }
+
+                sender.sendMessage("§c§l[Cảnh báo Quan Trọng]");
+                sender.sendMessage("§eDữ liệu restore đã sẵn sàng tại plugins/Ego-System/restore_pending/");
+                sender.sendMessage("§eServer đang chạy, việc chép đè sẽ làm hỏng world (Windows locks).");
+                sender.sendMessage("§aNếu bạn muốn tắt ngay Server để áp dụng file thủ công, hãy gõ: §f/ssm restore confirm-stop");
+                
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.SEVERE, "Lỗi khi chạy prepareRestoreContext", e);
+                sender.sendMessage("§c[Restore] Đã xảy ra lỗi tàn bạo, xem console!");
+            }
+        });
+    }
+
+    private Map<String, Path> collectAllDirectoryFiles(Path dir) throws IOException {
+        Map<String, Path> map = new HashMap<>();
+        Files.walkFileTree(dir, new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                map.put(dir.relativize(file).toString().replace("\\", "/"), file);
+                return FileVisitResult.CONTINUE;
+            }
+        });
+        return map;
+    }
+
+    private boolean downloadFromGoogleDrive(String fileName, Path dest, org.bukkit.command.CommandSender sender) {
+        String folderId = config.getGoogleDriveFolderId();
+        File credFile = new File(plugin.getDataFolder(), "GoogleDriveCredential.json");
+
+        if (!credFile.exists()) {
+            sender.sendMessage("§cGoogle Drive credential thiếu file json.");
+            return false;
+        }
+
+        Gson gson = new Gson();
+        String refreshToken = null;
+        String clientId = null;
+        String clientSecret = null;
+
+        try (FileReader reader = new FileReader(credFile)) {
+             JsonObject creds = gson.fromJson(reader, JsonObject.class);
+             if (creds.has("refresh_token")) refreshToken = creds.get("refresh_token").getAsString();
+             else {
+                 sender.sendMessage("§cGoogleDriveCredential.json thiếu 'refresh_token'.");
+                 return false;
+             }
+             if (creds.has("client_id")) clientId = creds.get("client_id").getAsString();
+             else {
+                 sender.sendMessage("§cGoogleDriveCredential.json thiếu 'client_id'. Hãy thêm vào file.");
+                 return false;
+             }
+             if (creds.has("client_secret")) clientSecret = creds.get("client_secret").getAsString();
+             else {
+                 sender.sendMessage("§cGoogleDriveCredential.json thiếu 'client_secret'. Hãy thêm vào file.");
+                 return false;
+             }
+        } catch (Exception e) {
+             sender.sendMessage("§cLỗi đọc file json Google Drive");
+             return false;
+        }
+
+        OkHttpClient client = new OkHttpClient.Builder().connectTimeout(30, TimeUnit.SECONDS).readTimeout(5, TimeUnit.MINUTES).build();
+
+        try {
+            // Get token
+            RequestBody tokenBody = new FormBody.Builder()
+                    .add("client_id", clientId).add("client_secret", clientSecret)
+                    .add("refresh_token", refreshToken).add("grant_type", "refresh_token").build();
+
+            Request tokenReq = new Request.Builder().url("https://oauth2.googleapis.com/token").post(tokenBody).build();
+
+            String token;
+            try (Response response = client.newCall(tokenReq).execute()) {
+                if (!response.isSuccessful()) return false;
+                token = gson.fromJson(response.body().string(), JsonObject.class).get("access_token").getAsString();
+            }
+
+            // Search file in folder
+            HttpUrl searchUrl = HttpUrl.parse("https://www.googleapis.com/drive/v3/files").newBuilder()
+                    .addQueryParameter("q", "name='" + fileName + "' and '" + folderId + "' in parents and trashed=false")
+                    .addQueryParameter("fields", "files(id, name)").build();
+
+            Request searchReq = new Request.Builder().url(searchUrl).header("Authorization", "Bearer " + token).get().build();
+            String fileId = null;
+
+            try (Response response = client.newCall(searchReq).execute()) {
+                if (!response.isSuccessful()) return false;
+                JsonObject resObj = gson.fromJson(response.body().string(), JsonObject.class);
+                var jsonArray = resObj.getAsJsonArray("files");
+                if (jsonArray.size() > 0) fileId = jsonArray.get(0).getAsJsonObject().get("id").getAsString();
+            }
+
+            if (fileId == null) {
+                sender.sendMessage("§cKhông tìm thấy file trên Google Drive thư mục này.");
+                return false;
+            }
+
+            // Download
+            Request downloadReq = new Request.Builder()
+                    .url("https://www.googleapis.com/drive/v3/files/" + fileId + "?alt=media")
+                    .header("Authorization", "Bearer " + token).get().build();
+
+            try (Response response = client.newCall(downloadReq).execute()) {
+                if (!response.isSuccessful()) return false;
+                try (InputStream is = response.body().byteStream();
+                     FileOutputStream fos = new FileOutputStream(dest.toFile())) {
+                    byte[] buffer = new byte[8192];
+                    int bytesRead;
+                    while ((bytesRead = is.read(buffer)) != -1) {
+                         fos.write(buffer, 0, bytesRead);
+                    }
+                }
+            }
+            return true;
+
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Gdrive download fail", e);
+            return false;
+        }
+    }
+
+    private boolean downloadFromGitHub(String releaseName, Path dest, org.bukkit.command.CommandSender sender) {
+        String token = config.getGitHubToken();
+        String repo = config.getGitHubRepository();
+        if (token == null || token.isEmpty() || repo == null || repo.isEmpty()) {
+            sender.sendMessage("§cGitHub sync chưa thiết lập token/repo.");
+            return false;
+        }
+
+        OkHttpClient client = new OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(5, TimeUnit.MINUTES)
+            .build();
+            
+        Gson gson = new Gson();
+
+        try {
+            // Get release by tag
+            Request req = new Request.Builder()
+                    .url("https://api.github.com/repos/" + repo + "/releases/tags/" + releaseName)
+                    .header("Authorization", "token " + token)
+                    .header("Accept", "application/vnd.github.v3+json").get().build();
+
+            String assetUrl = null;
+            try (Response response = client.newCall(req).execute()) {
+                if (!response.isSuccessful()) {
+                     sender.sendMessage("§cKhông tìm thấy release " + releaseName);
+                     return false;
+                }
+                JsonObject resObj = gson.fromJson(response.body().string(), JsonObject.class);
+                var assets = resObj.getAsJsonArray("assets");
+                if (assets.size() > 0) {
+                     assetUrl = assets.get(0).getAsJsonObject().get("url").getAsString();
+                }
+            }
+
+            if (assetUrl == null) {
+                sender.sendMessage("§Release không có file asset đính kèm.");
+                return false;
+            }
+
+            // Download asset
+            Request dlReq = new Request.Builder()
+                    .url(assetUrl)
+                    .header("Authorization", "token " + token)
+                    .header("Accept", "application/octet-stream").get().build();
+
+            try (Response response = client.newCall(dlReq).execute()) {
+                if (!response.isSuccessful()) return false;
+                try (InputStream is = response.body().byteStream();
+                     FileOutputStream fos = new FileOutputStream(dest.toFile())) {
+                    byte[] buffer = new byte[8192];
+                    int bytesRead;
+                    while ((bytesRead = is.read(buffer)) != -1) {
+                         fos.write(buffer, 0, bytesRead);
+                    }
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Github download fail", e);
+            return false;
+        }
+    }
+
+    private void extractArchive(Path archive, Path destDir) throws IOException {
+        String fileName = archive.getFileName().toString();
+        if (fileName.endsWith(".tar.gz")) {
+             try (InputStream fi = Files.newInputStream(archive);
+                  BufferedInputStream bi = new BufferedInputStream(fi);
+                  GzipCompressorInputStream gzi = new GzipCompressorInputStream(bi);
+                  TarArchiveInputStream ti = new TarArchiveInputStream(gzi)) {
+                  org.apache.commons.compress.archivers.ArchiveEntry entry;
+                  while ((entry = ti.getNextEntry()) != null) {
+                       extractEntry(destDir, entry.getName(), entry.isDirectory(), ti);
+                  }
+             }
+        } else if (fileName.endsWith(".zip")) {
+             try (java.util.zip.ZipInputStream zis = new java.util.zip.ZipInputStream(Files.newInputStream(archive))) {
+                  java.util.zip.ZipEntry ze = zis.getNextEntry();
+                  while (ze != null) {
+                       extractEntry(destDir, ze.getName(), ze.isDirectory(), zis);
+                       ze = zis.getNextEntry();
+                  }
+                  zis.closeEntry();
+             }
+        }
+    }
+
+    private void extractEntry(Path destDir, String name, boolean isDirectory, InputStream is) throws IOException {
+        Path newPath = destDir.resolve(name);
+        // Prevent path traversal
+        if (!newPath.normalize().startsWith(destDir.normalize())) return;
+
+        if (isDirectory) {
+            Files.createDirectories(newPath);
+        } else {
+            Files.createDirectories(newPath.getParent());
+            Files.copy(is, newPath, StandardCopyOption.REPLACE_EXISTING);
+        }
     }
 
     public long getLastBackupTime() {
