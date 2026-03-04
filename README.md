@@ -5,6 +5,9 @@
 ![Ego-System](https://img.shields.io/badge/Ego--System-Automation-E84C3D?style=for-the-badge&logo=minecraft&logoColor=white)
 [![Java](https://img.shields.io/badge/Java-21-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://jdk.java.net/21/)
 [![Spigot](https://img.shields.io/badge/Spigot-1.21+-F7CF0C?style=for-the-badge&logo=spigotmc&logoColor=white)](https://www.spigotmc.org/)
+[![License](https://img.shields.io/badge/License-ENCL-red.svg?style=for-the-badge)](./LICENSE)
+[![GitHub Repo stars](https://img.shields.io/github/stars/ego-smp-labs/Ego-System?style=for-the-badge&logo=github&color=333333)](https://github.com/ego-smp-labs/Ego-System)
+[![Discord](https://img.shields.io/badge/Discord-Join%20Us-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/jRqnNbupj4)
 
 **Automated Server Management & Plugin Updates** 🛠️
 *Smooth, Silent, and Smart.*
@@ -91,5 +94,9 @@ Built with Gradle.
 ```
 
 **Repository**: [https://github.com/ego-smp-labs/Ego-System](https://github.com/ego-smp-labs/Ego-System)
+
+## License
+
+Distributed under the Ego SMP Non-Commercial License (ENCL). See `LICENSE` for more information.
 
 Copyright © 2026 **NirussVn0** & Ego-SMP Labs.

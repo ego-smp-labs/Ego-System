@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'vn.nirussv.egosystem'
-version = '1.0.0'
+version = '1.0.1'
 
 repositories {
     mavenCentral()
@@ -26,6 +26,9 @@ dependencies {
     
     // JSON parsing
     implementation 'com.google.code.gson:gson:2.10.1'
+    
+    // Tar archives
+    implementation 'org.apache.commons:commons-compress:1.26.0'
 }
 
 def targetJavaVersion = 21
