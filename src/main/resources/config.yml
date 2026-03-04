@@ -72,6 +72,28 @@ github:
   # Placeholders: %date%, %time%, %server%
   commit-message: "Backup: %date% %time%"
 
+# ==================== GOOGLE DRIVE SYNC (Optional) ====================
+# Upload backups to Google Drive for off-site storage
+# Setup:
+#   1. Create an OAuth app at https://console.cloud.google.com/apis/credentials
+#   2. Enable Google Drive API
+#   3. Copy Client ID and Client Secret below
+#   4. Run /ssm backup gdrive link in-game to authorize
+#   5. Click the link, authorize, paste code: /ssm backup gdrive verify <code>
+google-drive:
+  # Enable Google Drive sync
+  enabled: false
+
+  # OAuth 2.0 Client ID (from Google Cloud Console)
+  client-id: ""
+
+  # OAuth 2.0 Client Secret (from Google Cloud Console)
+  client-secret: ""
+
+  # Google Drive folder ID to upload backups into (optional)
+  # Get from the URL: https://drive.google.com/drive/folders/<FOLDER_ID>
+  folder-id: ""
+
 # ==================== AUTO-UPDATE PLUGINS ====================
 auto-update:
   # Enable auto-update feature

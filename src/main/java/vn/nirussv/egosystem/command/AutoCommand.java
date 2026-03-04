@@ -28,7 +28,7 @@ public class AutoCommand implements CommandExecutor, TabCompleter {
                        UpdateService updateService, ConfigManager config,
                        EventStateMachine eventStateMachine) {
         
-        register(new BackupCmd(backupService, config));
+        register(new BackupCmd(plugin, backupService, config));
         register(new UpdateCmd(plugin, updateService));
         register(new EventCmd(eventStateMachine));
         register(new ReloadCmd(plugin));
@@ -69,7 +69,7 @@ public class AutoCommand implements CommandExecutor, TabCompleter {
 
     private void showHelp(CommandSender sender) {
         sender.sendMessage("§8[§cEgo System§8] §7Commands:");
-        sender.sendMessage("§8- §c/ssm backup <now|status|list> §7- Backup management");
+        sender.sendMessage("§8- §c/ssm backup <now|status|list|gdrive> §7- Backup management");
         sender.sendMessage("§8- §c/ssm update <check|apply|list|download> §7- Plugin updates");
         sender.sendMessage("§8- §c/ssm restore <source> <file> <unzip> §7- Restore backups");
         sender.sendMessage("§8- §c/ssm reload §7- Reload config");

@@ -113,6 +113,14 @@ public class ConfigManager {
         return config.getString("google-drive.folder-id", "");
     }
 
+    public String getGoogleDriveClientId() {
+        return config.getString("google-drive.client-id", "");
+    }
+
+    public String getGoogleDriveClientSecret() {
+        return config.getString("google-drive.client-secret", "");
+    }
+
     // ==================== Auto-Update Settings ====================
 
 

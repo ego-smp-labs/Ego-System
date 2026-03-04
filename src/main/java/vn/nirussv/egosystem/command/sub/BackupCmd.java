@@ -1,6 +1,7 @@
 package vn.nirussv.egosystem.command.sub;
 
 import org.bukkit.command.CommandSender;
+import vn.nirussv.egosystem.EgoSystemPlugin;
 import vn.nirussv.egosystem.backup.LocalBackupService;
 import vn.nirussv.egosystem.command.SubCommand;
 import vn.nirussv.egosystem.config.ConfigManager;
@@ -14,10 +15,12 @@ import java.util.stream.Collectors;
 
 public class BackupCmd implements SubCommand {
 
+    private final EgoSystemPlugin plugin;
     private final LocalBackupService backupService;
     private final ConfigManager config;
 
-    public BackupCmd(LocalBackupService backupService, ConfigManager config) {
+    public BackupCmd(EgoSystemPlugin plugin, LocalBackupService backupService, ConfigManager config) {
+        this.plugin = plugin;
         this.backupService = backupService;
         this.config = config;
     }
@@ -35,7 +38,7 @@ public class BackupCmd implements SubCommand {
     @Override
     public void execute(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage("§eUsage: /ssm backup <now|status|list>");
+            sender.sendMessage("§eUsage: /ssm backup <now|status|list|gdrive>");
             return;
         }
 
@@ -67,15 +70,76 @@ public class BackupCmd implements SubCommand {
                     }
                 }
             }
-            default -> sender.sendMessage("§eUsage: /ssm backup <now|status|list>");
+            case "gdrive" -> {
+                if (args.length < 3) {
+                    sender.sendMessage("§eUsage: /ssm backup gdrive <link|verify|status>");
+                    return;
+                }
+                switch (args[2].toLowerCase()) {
+                    case "link" -> {
+                        if (backupService.isGoogleDriveLinked()) {
+                            sender.sendMessage("§aGoogle Drive đã liên kết rồi! Dùng /ssm backup gdrive status để xem thông tin.");
+                            return;
+                        }
+                        String authUrl = backupService.generateGoogleDriveAuthUrl();
+                        if (authUrl == null) {
+                            sender.sendMessage("§cLỗi: Thiếu client-id trong config.yml. Vui lòng thiết lập google-drive.client-id trước.");
+                            return;
+                        }
+                        sender.sendMessage("§a§l=== Liên kết Google Drive ===");
+                        sender.sendMessage("§eBước 1: Mở link bên dưới trong trình duyệt:");
+                        sender.sendMessage("§b§n" + authUrl);
+                        sender.sendMessage("§eBước 2: Đăng nhập Google và cấp quyền.");
+                        sender.sendMessage("§eBước 3: Copy code và chạy:");
+                        sender.sendMessage("§f/ssm backup gdrive verify <code>");
+                    }
+                    case "verify" -> {
+                        if (args.length < 4) {
+                            sender.sendMessage("§eUsage: /ssm backup gdrive verify <authorization_code>");
+                            return;
+                        }
+                        String code = args[3].trim();
+                        sender.sendMessage("§eĐang xác minh...");
+                        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+                            boolean success = backupService.exchangeGoogleDriveCode(code);
+                            plugin.getServer().getScheduler().runTask(plugin, () -> {
+                                if (success) {
+                                    sender.sendMessage("§a§l✔ Liên kết Google Drive thành công!");
+                                    sender.sendMessage("§7Backup sẽ tự động sync lên Drive khi chạy.");
+                                } else {
+                                    sender.sendMessage("§c§l✘ Liên kết thất bại. Kiểm tra console để xem lỗi chi tiết.");
+                                    sender.sendMessage("§7Đảm bảo code chính xác và client-id/client-secret đúng trong config.yml.");
+                                }
+                            });
+                        });
+                    }
+                    case "status" -> {
+                        boolean linked = backupService.isGoogleDriveLinked();
+                        sender.sendMessage("§e=== Google Drive Status ===");
+                        sender.sendMessage("§7Enabled: §f" + (config.isGoogleDriveEnabled() ? "§aYes" : "§cNo"));
+                        sender.sendMessage("§7Linked: " + (linked ? "§a✔ Connected" : "§c✘ Not linked"));
+                        sender.sendMessage("§7Folder ID: §f" + (config.getGoogleDriveFolderId().isEmpty() ? "(root)" : config.getGoogleDriveFolderId()));
+                        if (!linked) {
+                            sender.sendMessage("§7Chạy §f/ssm backup gdrive link §7để liên kết.");
+                        }
+                    }
+                    default -> sender.sendMessage("§eUsage: /ssm backup gdrive <link|verify|status>");
+                }
+            }
+            default -> sender.sendMessage("§eUsage: /ssm backup <now|status|list|gdrive>");
         }
     }
 
     @Override
     public List<String> getTabCompletions(CommandSender sender, String[] args) {
         if (args.length == 2) {
-            return Arrays.asList("now", "status", "list").stream()
+            return Arrays.asList("now", "status", "list", "gdrive").stream()
                     .filter(s -> s.toLowerCase().startsWith(args[1].toLowerCase()))
+                    .collect(Collectors.toList());
+        }
+        if (args.length == 3 && args[1].equalsIgnoreCase("gdrive")) {
+            return Arrays.asList("link", "verify", "status").stream()
+                    .filter(s -> s.toLowerCase().startsWith(args[2].toLowerCase()))
                     .collect(Collectors.toList());
         }
         return Collections.emptyList();

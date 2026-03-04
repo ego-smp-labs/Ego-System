@@ -459,34 +459,30 @@ public class LocalBackupService {
      */
     private void syncToGoogleDrive(Path backupPath) {
         String folderId = config.getGoogleDriveFolderId();
-        File credFile = new File(plugin.getDataFolder(), "GoogleDriveCredential.json");
+        String clientId = config.getGoogleDriveClientId();
+        String clientSecret = config.getGoogleDriveClientSecret();
 
+        if (clientId.isEmpty() || clientSecret.isEmpty()) {
+            plugin.getLogger().warning("Google Drive: client-id or client-secret not set in config.yml. Run /ssm backup gdrive link.");
+            return;
+        }
+
+        // Read refresh_token from credential file
+        File credFile = new File(plugin.getDataFolder(), "GoogleDriveCredential.json");
         if (!credFile.exists()) {
-            plugin.getLogger().warning("Google Drive enabled but GoogleDriveCredential.json missing in plugins/Ego-System/");
+            plugin.getLogger().warning("Google Drive not linked yet! Run /ssm backup gdrive link in-game.");
             return;
         }
 
         plugin.getLogger().info("Starting Google Drive sync...");
         Gson gson = new Gson();
         String refreshToken = null;
-        String clientId = null;
-        String clientSecret = null;
 
         try (FileReader reader = new FileReader(credFile)) {
             JsonObject creds = gson.fromJson(reader, JsonObject.class);
             if (creds.has("refresh_token")) refreshToken = creds.get("refresh_token").getAsString();
             else {
-                plugin.getLogger().warning("GoogleDriveCredential.json is missing required 'refresh_token'.");
-                return;
-            }
-            if (creds.has("client_id")) clientId = creds.get("client_id").getAsString();
-            else {
-                plugin.getLogger().warning("GoogleDriveCredential.json is missing required 'client_id'. Please add your OAuth Client ID.");
-                return;
-            }
-            if (creds.has("client_secret")) clientSecret = creds.get("client_secret").getAsString();
-            else {
-                plugin.getLogger().warning("GoogleDriveCredential.json is missing required 'client_secret'. Please add your OAuth Client Secret.");
+                plugin.getLogger().warning("GoogleDriveCredential.json missing 'refresh_token'. Run /ssm backup gdrive link.");
                 return;
             }
         } catch (Exception e) {
@@ -692,37 +688,32 @@ public class LocalBackupService {
 
     private boolean downloadFromGoogleDrive(String fileName, Path dest, org.bukkit.command.CommandSender sender) {
         String folderId = config.getGoogleDriveFolderId();
-        File credFile = new File(plugin.getDataFolder(), "GoogleDriveCredential.json");
+        String clientId = config.getGoogleDriveClientId();
+        String clientSecret = config.getGoogleDriveClientSecret();
 
+        if (clientId.isEmpty() || clientSecret.isEmpty()) {
+            sender.sendMessage("§cGoogle Drive: client-id hoặc client-secret chưa thiết lập trong config.yml.");
+            return false;
+        }
+
+        File credFile = new File(plugin.getDataFolder(), "GoogleDriveCredential.json");
         if (!credFile.exists()) {
-            sender.sendMessage("§cGoogle Drive credential thiếu file json.");
+            sender.sendMessage("§cGoogle Drive chưa liên kết! Chạy /ssm backup gdrive link.");
             return false;
         }
 
         Gson gson = new Gson();
         String refreshToken = null;
-        String clientId = null;
-        String clientSecret = null;
 
         try (FileReader reader = new FileReader(credFile)) {
              JsonObject creds = gson.fromJson(reader, JsonObject.class);
              if (creds.has("refresh_token")) refreshToken = creds.get("refresh_token").getAsString();
              else {
-                 sender.sendMessage("§cGoogleDriveCredential.json thiếu 'refresh_token'.");
-                 return false;
-             }
-             if (creds.has("client_id")) clientId = creds.get("client_id").getAsString();
-             else {
-                 sender.sendMessage("§cGoogleDriveCredential.json thiếu 'client_id'. Hãy thêm vào file.");
-                 return false;
-             }
-             if (creds.has("client_secret")) clientSecret = creds.get("client_secret").getAsString();
-             else {
-                 sender.sendMessage("§cGoogleDriveCredential.json thiếu 'client_secret'. Hãy thêm vào file.");
+                 sender.sendMessage("§cThiếu refresh_token. Chạy /ssm backup gdrive link để liên kết lại.");
                  return false;
              }
         } catch (Exception e) {
-             sender.sendMessage("§cLỗi đọc file json Google Drive");
+             sender.sendMessage("§cLỗi đọc file GoogleDriveCredential.json");
              return false;
         }
 
@@ -897,5 +888,114 @@ public class LocalBackupService {
 
     public String getLastBackupFile() {
         return lastBackupFile;
+    }
+
+    // ==================== Google Drive OAuth Link Flow ====================
+
+    private static final String GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
+    private static final String GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+    private static final String DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+    private static final String REDIRECT_URI = "urn:ietf:wg:oauth:2.0:oob";
+
+    /**
+     * Checks whether Google Drive is already linked (refresh_token exists).
+     */
+    public boolean isGoogleDriveLinked() {
+        File credFile = new File(plugin.getDataFolder(), "GoogleDriveCredential.json");
+        if (!credFile.exists()) return false;
+        try (FileReader reader = new FileReader(credFile)) {
+            JsonObject creds = new Gson().fromJson(reader, JsonObject.class);
+            return creds.has("refresh_token") && !creds.get("refresh_token").getAsString().isEmpty();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Generates the Google OAuth authorization URL.
+     * The user must open this URL in a browser, authorize, and paste the returned code.
+     *
+     * @return the authorization URL, or null if client-id is not configured
+     */
+    public String generateGoogleDriveAuthUrl() {
+        String clientId = config.getGoogleDriveClientId();
+        if (clientId.isEmpty()) return null;
+
+        return GOOGLE_AUTH_URL
+                + "?client_id=" + clientId
+                + "&redirect_uri=" + REDIRECT_URI
+                + "&response_type=code"
+                + "&scope=" + DRIVE_SCOPE
+                + "&access_type=offline"
+                + "&prompt=consent";
+    }
+
+    /**
+     * Exchanges the authorization code for tokens and saves refresh_token to GoogleDriveCredential.json.
+     *
+     * @param authCode the authorization code from the user
+     * @return true if successful
+     */
+    public boolean exchangeGoogleDriveCode(String authCode) {
+        String clientId = config.getGoogleDriveClientId();
+        String clientSecret = config.getGoogleDriveClientSecret();
+
+        if (clientId.isEmpty() || clientSecret.isEmpty()) {
+            plugin.getLogger().warning("Google Drive: client-id or client-secret not set in config.yml.");
+            return false;
+        }
+
+        OkHttpClient client = new OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .build();
+
+        RequestBody body = new FormBody.Builder()
+                .add("code", authCode)
+                .add("client_id", clientId)
+                .add("client_secret", clientSecret)
+                .add("redirect_uri", REDIRECT_URI)
+                .add("grant_type", "authorization_code")
+                .build();
+
+        Request request = new Request.Builder()
+                .url(GOOGLE_TOKEN_URL)
+                .post(body)
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                plugin.getLogger().warning("Google OAuth token exchange failed: " + response.code() + " " + response.body().string());
+                return false;
+            }
+
+            Gson gson = new Gson();
+            JsonObject tokenResponse = gson.fromJson(response.body().string(), JsonObject.class);
+
+            if (!tokenResponse.has("refresh_token")) {
+                plugin.getLogger().warning("Google OAuth response missing refresh_token. Try revoking access and re-linking.");
+                return false;
+            }
+
+            // Save refresh_token to file
+            JsonObject credData = new JsonObject();
+            credData.addProperty("refresh_token", tokenResponse.get("refresh_token").getAsString());
+            if (tokenResponse.has("access_token")) {
+                credData.addProperty("access_token", tokenResponse.get("access_token").getAsString());
+            }
+
+            File credFile = new File(plugin.getDataFolder(), "GoogleDriveCredential.json");
+            Files.createDirectories(credFile.getParentFile().toPath());
+            try (FileWriter writer = new FileWriter(credFile)) {
+                gson.toJson(credData, writer);
+            }
+
+            plugin.getLogger().info("Google Drive linked successfully! refresh_token saved.");
+            return true;
+
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Google OAuth token exchange error", e);
+            return false;
+        }
     }
 }
